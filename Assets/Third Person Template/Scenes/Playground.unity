@@ -1060,7 +1060,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bfec77a9c02483a40b88b1ad5393300d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  bendingForce: 0
+  bendingForce: 0.3
   itemsSpacing: 0.05
   bendPattern:
     serializedVersion: 2
@@ -1092,6 +1092,7 @@ MonoBehaviour:
   - {fileID: 1065598244}
   - {fileID: 1852108454}
   - {fileID: 1700447211}
+  visualizeBendingLimits: 1
 --- !u!4 &1700447211 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8293931522279398795, guid: 67d8406e33528fb4ebddb3ebab29f24f,
