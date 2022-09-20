@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 namespace Stacking
 {
@@ -16,6 +17,10 @@ namespace Stacking
         private float itemsSpacing;
 
         [SerializeField]
+        [Range(1.0f, 10.0f)]
+        private float resetSpeed;
+
+        [SerializeField]
         private AnimationCurve bendPattern;
 
         [SerializeField]
@@ -25,25 +30,44 @@ namespace Stacking
         private bool visualizeBendingLimits;
 
         private float stackHeight;
-
         private float[] stackItemHeights;
+        private Vector2[] stackItemOffsets;
+
+        private Vector3 prevPosition;
+        private Vector2 velocity;
+
+        private float maxOffset => stackHeight * bendingForce;
+
+        [SerializeField]
+        private TMP_Text debugText;
 
         private void Awake() => Init();
 
+        private void Update()
+        {
+            UpdateVelocity();
+            ApplyVelocity();
+        }
+
         private void Init()
         {
-            stackHeight = 0.0f;
+            prevPosition = transform.position;
+            velocity = Vector2.zero;
             InitStackItems();
         }
 
         private void InitStackItems()
         {
-            Vector3 defaultPosition = transform.position;
-
+            stackHeight = 0.0f;
             stackItemHeights = new float[stackItems.Length];
+            stackItemOffsets = new Vector2[stackItems.Length];
+
+            Vector3 defaultPosition = transform.position;
 
             for (int i = 0; i < stackItems.Length; i++)
             {
+                stackItemOffsets[i] = Vector2.zero;
+
                 if (stackItems[i].parent != transform)
                     stackItems[i].SetParent(transform, true);
 
@@ -54,6 +78,55 @@ namespace Stacking
                                                      defaultPosition.z);
 
                 stackHeight += stackItemHeights[i] + itemsSpacing;
+            }
+        }
+
+        private void UpdateVelocity()
+        {
+            float dx = transform.position.x - prevPosition.x;
+            float dz = transform.position.z - prevPosition.z;
+            prevPosition = transform.position;
+
+            velocity = new Vector2(dx, dz) * Time.deltaTime * 100;
+
+            debugText.text = $"Velocity X: {velocity.x:0.00} \n Velocity Z: {velocity.y:0.00}";
+        }
+
+        private void ApplyVelocity()
+        {
+            float height = 0.0f;
+
+            for (int i = 0; i < stackItems.Length; i++)
+            {
+                height += stackItemHeights[i] / 2;
+
+                float heightNormilized = height / stackHeight;
+                float offsetLimit = bendPattern.Evaluate(heightNormilized) * maxOffset;
+
+
+                /*float lerpStepX = Mathf.InverseLerp(-offsetLimit, offsetLimit, stackItemOffsets[i].x + velocity.x);
+                float lerpStepZ = Mathf.InverseLerp(-offsetLimit, offsetLimit, stackItemOffsets[i].y + velocity.y);
+
+                float offsetX = Mathf.Lerp(-offsetLimit, offsetLimit, lerpStepX);
+                float offsetZ = Mathf.Lerp(-offsetLimit, offsetLimit, lerpStepZ);
+
+                stackItemOffsets[i] = new Vector2(offsetX, offsetZ);
+
+                stackItems[i].localPosition = new Vector3(0, stackItems[i].localPosition.y, 0) + new Vector3(offsetX, 0, offsetZ);*/
+
+                float lerpStepZ = 0.0f;
+
+                if (velocity.magnitude > 0.001f)
+                    lerpStepZ = Mathf.InverseLerp(0, -offsetLimit, stackItemOffsets[i].y - velocity.magnitude);
+                else
+                    lerpStepZ = Mathf.InverseLerp(0, -offsetLimit, stackItemOffsets[i].y + resetSpeed * Time.deltaTime);
+
+                float offsetZ = Mathf.Lerp(0, -offsetLimit, lerpStepZ);
+                stackItemOffsets[i] = new Vector2(0, offsetZ);
+                stackItems[i].localPosition = new Vector3(stackItems[i].localPosition.x, stackItems[i].localPosition.y, offsetZ);
+                //Debug.Log(offsetZ);
+
+                height += stackItemHeights[i] / 2 + itemsSpacing;
             }
         }
 
@@ -77,7 +150,6 @@ namespace Stacking
 
         private void DrawBendingLimits()
         {
-            float maxOffset = stackHeight * bendingForce;
             float offset = 0.0f;
             float offsetNormalized = 0.0f;
             
