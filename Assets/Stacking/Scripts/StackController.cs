@@ -47,6 +47,7 @@ namespace Stacking
         {
             UpdateVelocity();
             ApplyVelocity();
+            ApplyRotation();
         }
 
         private void Init()
@@ -127,6 +128,26 @@ namespace Stacking
                 //Debug.Log(offsetZ);
 
                 height += stackItemHeights[i] / 2 + itemsSpacing;
+            }
+        }
+
+        private void ApplyRotation()
+        {
+            if (stackItems.Length < 1)
+                return;
+
+            for (int i = 0; i < stackItems.Length; i++)
+            {
+                if (i == 0)
+                {
+                    stackItems[i].LookAt(transform.position, transform.forward);
+                    stackItems[i].rotation *= Quaternion.Euler(-90.0f, 0.0f, 0.0f);
+                }
+                else
+                {
+                    stackItems[i].LookAt(stackItems[i - 1].position, transform.forward);
+                    stackItems[i].rotation *= Quaternion.Euler(-90.0f, 0.0f, 0.0f);
+                }
             }
         }
 
