@@ -22,7 +22,7 @@ public class TestOnInspector : Editor
     private const float defaultLenght = 2.0f;
     private const float defaultValue = 1.0f;
 
-    private const int drawSteps = 1000;
+    private const int drawSteps = 300;
 
     private const float paddingLeft = 10f;
     private const float paddingRight = 2f;
@@ -108,17 +108,6 @@ public class TestOnInspector : Editor
                 GL.Vertex3(data[i].x + paddingLeft, rect.height - (data[i].y + paddingTop), 0.0f);
             GL.End();
 
-            /*float[] m_Data = { 0, 0.1f, 0.2f, 0.5f, 0.6f, 0.9f, -0.09f, 1 };
-            float graphWidth = rect.width - paddingLeft - paddingRight;
-            float graphHeight = rect.height - paddingTop - paddingBottom;
-            GL.Begin(GL.LINE_STRIP);
-            GL.Color(Color.cyan);
-            for (int i = 0; i < m_Data.Length; i++)
-            {   
-                GL.Vertex3(graphWidth / i, m_Data[i] * graphHeight, 0);
-            }
-            GL.End();*/
-
             GL.PopMatrix();
             GUI.EndClip();
         }
@@ -137,31 +126,37 @@ public class TestOnInspector : Editor
         z0 = z = ((SecondOrderDemo)target).Z;
         r0 = r = ((SecondOrderDemo)target).R;
 
-        func = new SecondOrderDynamics(f, z, r, Vector3.zero);
+        func = new SecondOrderDynamics(f, z, r, new Vector3(-defaultLenght, 0, 0));
     }
 
     private void UpdateData(float graphWidth, float graphHeight)
     {
-        float x_max = defaultLenght;
-        float x_min = 0.0f;
-
-        float y_max = defaultValue;
-        float y_min = 0.0f;
+        float x_min = 0, x_max = 0, y_min = 0, y_max = 0;
 
         for (int i = 0; i < drawSteps; i++)
         {
-            float T = 0.01f;
-            float x_remap = math.remap(0, drawSteps - 1, 0, defaultLenght, i);
+            float T = 0.0069f;
+            float x = math.remap(0, drawSteps - 1, -defaultLenght, defaultLenght, i);
+            float y = x > 0 ? defaultValue : 0;
 
-            Vector3? funcValues = func.Update(T, new Vector3(x_remap, defaultValue, 0));
+            Vector3? funcValues = func.Update(T, new Vector3(x, y, 0));
+
+            if (i == 0)
+            {
+                x_min = x_max = funcValues.Value.x;
+                y_min = y_max = funcValues.Value.y;
+            }
+            else
+            {
+                x_max = funcValues.Value.x > x_max ? funcValues.Value.x : x_max;
+                x_min = funcValues.Value.x < x_min ? funcValues.Value.x : x_min;
+
+                y_max = funcValues.Value.y > y_max ? funcValues.Value.y : y_max;
+                y_min = funcValues.Value.y < y_min ? funcValues.Value.y : y_min;
+            }
+
 
             data[i] = new Vector2(funcValues.Value.x, funcValues.Value.y);
-
-            x_max = funcValues.Value.x > x_max ? funcValues.Value.x : x_max;
-            x_min = funcValues.Value.x < x_min ? funcValues.Value.x : x_min;
-
-            y_max = funcValues.Value.y > y_max ? funcValues.Value.y : y_max;
-            y_min = funcValues.Value.y < y_min ? funcValues.Value.y : y_min;
         }
 
         for (int i = 0; i < drawSteps; i++)
@@ -171,6 +166,8 @@ public class TestOnInspector : Editor
 
             data[i] = new Vector2(x, y);
         }
+
+        Debug.Log($"X limits: [{x_min}; {x_max}]\nY limits [{y_min}; {y_max}]");
     }
 
     private void UpdateInput()
