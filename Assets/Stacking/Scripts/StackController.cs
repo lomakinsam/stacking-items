@@ -32,6 +32,7 @@ namespace Stacking
         private float stackHeight;
         private float[] stackItemHeights;
         private Vector2[] stackItemOffsets;
+        private Vector3[] stackItemPositions;
 
         private Vector3 prevPosition;
         private Vector2 velocity;
@@ -62,6 +63,7 @@ namespace Stacking
             stackHeight = 0.0f;
             stackItemHeights = new float[stackItems.Length];
             stackItemOffsets = new Vector2[stackItems.Length];
+            stackItemPositions = new Vector3[stackItems.Length];
 
             Vector3 defaultPosition = transform.position;
 
@@ -77,6 +79,8 @@ namespace Stacking
                 stackItems[i].position = new Vector3(defaultPosition.x,
                                                      defaultPosition.y + stackHeight + stackItemHeights[i] / 2,
                                                      defaultPosition.z);
+
+                stackItemPositions[i] = stackItems[i].position;
 
                 stackHeight += stackItemHeights[i] + itemsSpacing;
             }
@@ -124,8 +128,25 @@ namespace Stacking
 
                 float offsetZ = Mathf.Lerp(0, -offsetLimit, lerpStepZ);
                 stackItemOffsets[i] = new Vector2(0, offsetZ);
-                stackItems[i].localPosition = new Vector3(stackItems[i].localPosition.x, stackItems[i].localPosition.y, offsetZ);
+                //stackItems[i].localPosition = new Vector3(stackItems[i].localPosition.x, stackItems[i].localPosition.y, offsetZ);
                 //Debug.Log(offsetZ);
+
+                //stackItems[i].localPosition = stackItems[i].InverseTransformPoint(stackItemPositions[i]);
+                /*Vector3 targetPosition = new Vector3(0, height, offsetZ);
+                stackItems[i].localPosition = Vector3.MoveTowards(stackItems[i].InverseTransformPoint(stackItemPositions[i]), targetPosition, Time.deltaTime);
+                stackItemPositions[i] = stackItems[i].position;*/
+
+                Vector3 targetPosition = new Vector3(0, height, offsetZ);
+                stackItems[i].position = Vector3.MoveTowards(stackItemPositions[i], transform.TransformPoint(targetPosition), Time.deltaTime * 2f);
+                stackItemPositions[i] = stackItems[i].position;
+
+                /*Vector3 targetPosition = new Vector3(0, height, offsetZ);
+                float maxDriftDist = 2.0f;
+                float currentDrift = Vector3.Distance(stackItemPositions[i], transform.TransformPoint(targetPosition)) + Time.deltaTime * 3.0f;
+                float driftValue = Mathf.InverseLerp(0, maxDriftDist, currentDrift);
+                stackItems[i].position = Vector3.Lerp(stackItemPositions[i], transform.TransformPoint(targetPosition), driftValue);*/
+
+
 
                 height += stackItemHeights[i] / 2 + itemsSpacing;
             }
