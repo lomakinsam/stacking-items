@@ -1,18 +1,50 @@
 using UnityEngine;
 using UnityEditor;
 using Unity.Mathematics;
-using System.Collections.Generic;
 
 public class SecondOrderDemo : MonoBehaviour
 {
     [Range(0, 10)]
-    public float F;
+    public float f;
 
     [Range(0, 2)]
-    public float Z;
+    public float z;
 
     [Range(-10, 10)]
-    public float R;
+    public float r;
+
+    public Transform target;
+
+    private float f0, z0, r0;
+
+    private SecondOrderDynamics func;
+
+    private void Awake() => InitFunction();
+
+    private void Update()
+    {
+        if (target == null)
+            return;
+
+        if (f != f0 || r != r0 || z != z0)
+            InitFunction();
+        else
+        {
+            Vector3? funcOutput = func.Update(Time.deltaTime, target.position);
+
+            if (funcOutput != null)
+                transform.position = new Vector3(funcOutput.Value.x, funcOutput.Value.y, funcOutput.Value.z);
+        }
+    }
+
+    private void InitFunction()
+    {
+        f0 = f;
+        z0 = z;
+        r0 = r;
+
+        func = new SecondOrderDynamics(f, z, r, transform.position);
+    }
 }
 
 [CustomEditor(typeof(SecondOrderDemo))]
@@ -128,16 +160,16 @@ public class TestOnInspector : Editor
 
     private void UpdateInput()
     {
-        f = ((SecondOrderDemo)target).F;
-        z = ((SecondOrderDemo)target).Z;
-        r = ((SecondOrderDemo)target).R;
+        f = ((SecondOrderDemo)target).f;
+        z = ((SecondOrderDemo)target).z;
+        r = ((SecondOrderDemo)target).r;
     }
 
     private void InitFunction()
     {
-        f0 = f = ((SecondOrderDemo)target).F;
-        z0 = z = ((SecondOrderDemo)target).Z;
-        r0 = r = ((SecondOrderDemo)target).R;
+        f0 = f = ((SecondOrderDemo)target).f;
+        z0 = z = ((SecondOrderDemo)target).z;
+        r0 = r = ((SecondOrderDemo)target).r;
 
         func = new SecondOrderDynamics(f, z, r, new Vector3(-defaultLenght, 0, 0));
     }
