@@ -1,8 +1,7 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using SODynamics;
 
 namespace Stacking
 {
@@ -33,9 +32,12 @@ namespace Stacking
         private float[] stackItemHeights;
         private Vector2[] stackItemOffsets;
         private Vector3[] stackItemPositions;
+        private SecondOrderDynamics[] stackItemFuncs;
 
         private Vector3 prevPosition;
         private Vector2 velocity;
+
+        private SecondOrderDynamics func;
 
         private float maxOffset => stackHeight * bendingForce;
 
@@ -64,6 +66,7 @@ namespace Stacking
             stackItemHeights = new float[stackItems.Length];
             stackItemOffsets = new Vector2[stackItems.Length];
             stackItemPositions = new Vector3[stackItems.Length];
+            stackItemFuncs = new SecondOrderDynamics[stackItems.Length];
 
             Vector3 defaultPosition = transform.position;
 
@@ -81,6 +84,8 @@ namespace Stacking
                                                      defaultPosition.z);
 
                 stackItemPositions[i] = stackItems[i].position;
+
+                stackItemFuncs[i] = new SecondOrderDynamics(1.5f, 0.1f, 0, stackItems[i].localPosition);
 
                 stackHeight += stackItemHeights[i] + itemsSpacing;
             }
@@ -136,9 +141,17 @@ namespace Stacking
                 stackItems[i].localPosition = Vector3.MoveTowards(stackItems[i].InverseTransformPoint(stackItemPositions[i]), targetPosition, Time.deltaTime);
                 stackItemPositions[i] = stackItems[i].position;*/
 
+                //Vector3 localPosPrev = transform.InverseTransformPoint(stackItemPositions[i]);
+                //float dX = stackItems[i].localPosition.x - localPosPrev.x;
                 Vector3 targetPosition = new Vector3(0, height, offsetZ);
-                stackItems[i].position = Vector3.MoveTowards(stackItemPositions[i], transform.TransformPoint(targetPosition), Time.deltaTime * 2f);
-                stackItemPositions[i] = stackItems[i].position;
+                Vector3? funcValues = stackItemFuncs[i].Update(Time.deltaTime, targetPosition);
+                stackItems[i].localPosition = new Vector3(funcValues.Value.x, funcValues.Value.y, funcValues.Value.z);
+
+
+
+                //Vector3 targetPosition = new Vector3(0, height, offsetZ);
+                //stackItems[i].position = Vector3.MoveTowards(stackItemPositions[i], transform.TransformPoint(targetPosition), Time.deltaTime * 2f);
+                //stackItemPositions[i] = stackItems[i].position;
 
                 /*Vector3 targetPosition = new Vector3(0, height, offsetZ);
                 float maxDriftDist = 2.0f;
@@ -161,11 +174,15 @@ namespace Stacking
             {
                 if (i == 0)
                 {
-                    stackItems[i].LookAt(transform.position, transform.forward);
+                    Vector3 basePosition = transform.TransformPoint(Vector3.zero);
+                    stackItems[i].LookAt(basePosition, transform.forward);
                     stackItems[i].rotation *= Quaternion.Euler(-90.0f, 0.0f, 0.0f);
                 }
                 else
                 {
+                    Vector3 lookAtOffset = stackItems[i].TransformDirection(0, stackItemHeights[i - 1] / 2, 0);
+                    Vector3 lookAtPoint = stackItems[i - 1].position + lookAtOffset;
+
                     stackItems[i].LookAt(stackItems[i - 1].position, transform.forward);
                     stackItems[i].rotation *= Quaternion.Euler(-90.0f, 0.0f, 0.0f);
                 }
