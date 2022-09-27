@@ -170,22 +170,28 @@ namespace Stacking
             if (stackItems.Length < 1)
                 return;
 
+            Vector3 downDir, rightDir, forwardDir, lookAtPoint, lookAtOffset;
+
             for (int i = 0; i < stackItems.Length; i++)
             {
                 if (i == 0)
-                {
-                    Vector3 basePosition = transform.TransformPoint(Vector3.zero);
-                    stackItems[i].LookAt(basePosition, transform.forward);
-                    stackItems[i].rotation *= Quaternion.Euler(-90.0f, 0.0f, 0.0f);
-                }
+                    lookAtPoint = transform.TransformPoint(Vector3.zero);
                 else
                 {
-                    Vector3 lookAtOffset = stackItems[i].TransformDirection(0, stackItemHeights[i - 1] / 2, 0);
-                    Vector3 lookAtPoint = stackItems[i - 1].position + lookAtOffset;
-
-                    stackItems[i].LookAt(stackItems[i - 1].position, transform.forward);
-                    stackItems[i].rotation *= Quaternion.Euler(-90.0f, 0.0f, 0.0f);
+                    lookAtOffset = stackItems[i - 1].TransformDirection(0, stackItemHeights[i - 1] / 2, 0);
+                    lookAtPoint = stackItems[i - 1].position + lookAtOffset;
                 }
+
+                //direction object's local down should face
+                downDir = (lookAtPoint - stackItems[i].position).normalized;
+
+                // direction object's local right should face
+                rightDir = transform.right;
+
+                // direction object's local forward should face
+                forwardDir = Vector3.Cross(downDir, rightDir);
+
+                stackItems[i].rotation = Quaternion.LookRotation(forwardDir, -downDir);
             }
         }
 
@@ -204,7 +210,7 @@ namespace Stacking
             if (!visualizeBendingLimits || stackItems.Length < 1 || stackItemHeights == null || stackItemHeights.Length < 1)
                 return;
 
-            DrawBendingLimits();
+            //DrawBendingLimits();
         }
 
         private void DrawBendingLimits()
