@@ -1,12 +1,14 @@
 using System;
 using UnityEngine;
 using TMPro;
-using SODynamics;
+using System.Collections.Generic;
 
 namespace Stacking
 {
     public class StackController : MonoBehaviour
     {
+        public Transform[] stackItems;
+
         [SerializeField]
         [Range(0.0f, 1.0f)]
         private float bendingForce;
@@ -16,35 +18,42 @@ namespace Stacking
         private float itemsSpacing;
 
         [SerializeField]
-        [Range(1.0f, 10.0f)]
-        private float resetSpeed;
-
-        [SerializeField]
         private AnimationCurve bendPattern;
-
-        [SerializeField]
-        private Transform[] stackItems;
-
+        
         [SerializeField]
         private bool visualizeBendingLimits;
 
+        [SerializeField]
+        private AnimationCurve shakeDistribution;
+
+        [SerializeField]
+        private float maxVelocity = 2.0f; // 5 units per second (5 m/s)
+
+        [SerializeField]
+        private float bendingSpeed = 25f;
+
+        [SerializeField]
+        private float stabilizationSpeed = 25f;
+
+        [SerializeField]
+        private float shakePower = 0.15f;
+
+        [SerializeField]
+        private float shakeFrequency = 2.0f;
+
         private float stackHeight;
-        private float[] stackItemHeights;
-        private float[] velocityMgn;
-        private Vector2[] stackItemOffsets;
-        private Vector3[] stackItemPositions;
-        private SecondOrderDynamics[] stackItemFuncs;
+
+        private List<StackItem> _stackItems;
+
+        private Vector3 velocity;
 
         private Vector3 prevPosition;
-        private Vector2 velocity;
+        private float velocityMgn;
 
         private float maxOffset => stackHeight * bendingForce;
 
         [SerializeField]
         private TMP_Text debugText;
-
-        [SerializeField]
-        private AnimationCurve noisePattern;
 
         private void Awake() => Init();
 
@@ -57,219 +66,96 @@ namespace Stacking
 
         private void Init()
         {
+            velocity = Vector3.zero;
+            velocityMgn = 0.0f;
             prevPosition = transform.position;
-            velocity = Vector2.zero;
+            
             InitStackItems();
         }
 
         private void InitStackItems()
         {
             stackHeight = 0.0f;
-            stackItemHeights = new float[stackItems.Length];
-            velocityMgn = new float[stackItems.Length];
-            stackItemOffsets = new Vector2[stackItems.Length];
-            stackItemPositions = new Vector3[stackItems.Length];
-            stackItemFuncs = new SecondOrderDynamics[stackItems.Length];
+
+            _stackItems = new List<StackItem>();
 
             Vector3 defaultPosition = transform.position;
 
             for (int i = 0; i < stackItems.Length; i++)
             {
-                stackItemOffsets[i] = Vector2.zero;
+                Vector3 stackBottom = new (defaultPosition.x, defaultPosition.y + stackHeight, defaultPosition.z);
+                Vector3 SOD_params = new (1.5f, 0.1f, 0.0f);
 
-                if (stackItems[i].parent != transform)
-                    stackItems[i].SetParent(transform, true);
+                var item = new StackItem(stackItems[i], stackBottom, SOD_params);
+                _stackItems.Add(item);
 
-                stackItemHeights[i] = GetItemHeight(stackItems[i]);
-
-                stackItems[i].position = new Vector3(defaultPosition.x,
-                                                     defaultPosition.y + stackHeight + stackItemHeights[i] / 2,
-                                                     defaultPosition.z);
-
-                stackItemPositions[i] = stackItems[i].position;
-                velocityMgn[i] = 0;
-
-                stackItemFuncs[i] = new SecondOrderDynamics(1.5f, 0.1f, 0, stackItems[i].localPosition);
-
-                stackHeight += stackItemHeights[i] + itemsSpacing;
+                stackHeight += item.Height + itemsSpacing;
             }
         }
 
         private void UpdateVelocity()
         {
-            Vector3 vel = (transform.position - prevPosition) / Time.deltaTime;
-
-
-            float dx = transform.position.x - prevPosition.x;
-            float dz = transform.position.z - prevPosition.z;
+            velocity = (transform.position - prevPosition) / Time.deltaTime;
             prevPosition = transform.position;
 
-            //velocity = new Vector2(dx, dz) * Time.deltaTime * 100;
-            velocity = new Vector2(vel.x, vel.z);
-
-            //debugText.text = $"Velocity X: {velocity.x:0.00} \n Velocity Z: {velocity.y:0.00}";
-            debugText.text = $"Velocity X: {vel.x:0.00} \n Velocity Z: {vel.z:0.00}";
+            debugText.text = $"Velocity X: {velocity.x:0.00} \n Velocity Z: {velocity.z:0.00}";
         }
 
         private void ApplyVelocity()
         {
             float height = 0.0f;
 
-            for (int i = 0; i < stackItems.Length; i++)
+            foreach (var item in _stackItems)
             {
-                height += stackItemHeights[i] / 2;
+                height += item.HalfHeight;
 
                 float heightNormilized = height / stackHeight;
                 float offsetLimit = bendPattern.Evaluate(heightNormilized) * maxOffset;
 
+                float targetVelocityMgn = velocity.magnitude;
 
-                /*float lerpStepX = Mathf.InverseLerp(-offsetLimit, offsetLimit, stackItemOffsets[i].x + velocity.x);
-                float lerpStepZ = Mathf.InverseLerp(-offsetLimit, offsetLimit, stackItemOffsets[i].y + velocity.y);
+                if (velocityMgn < targetVelocityMgn)
+                    velocityMgn = Mathf.MoveTowards(velocityMgn, targetVelocityMgn, bendingSpeed * Time.deltaTime);
+                else if (velocityMgn > targetVelocityMgn)
+                    velocityMgn = Mathf.MoveTowards(velocityMgn, targetVelocityMgn, stabilizationSpeed * Time.deltaTime);
 
-                float offsetX = Mathf.Lerp(-offsetLimit, offsetLimit, lerpStepX);
-                float offsetZ = Mathf.Lerp(-offsetLimit, offsetLimit, lerpStepZ);
+                float lerpStepZ = Mathf.InverseLerp(0, maxVelocity, velocityMgn);
 
-                stackItemOffsets[i] = new Vector2(offsetX, offsetZ);
+                float shake = Mathf.PingPong(Time.time * shakeFrequency, shakePower) - shakePower / 2;
+                shake *= shakeDistribution.Evaluate(lerpStepZ);
 
-                stackItems[i].localPosition = new Vector3(0, stackItems[i].localPosition.y, 0) + new Vector3(offsetX, 0, offsetZ);*/
-
-                float lerpStepZ = 0.0f;
-                float maxVelocity = 2.0f; // 5 units per second (5 m/s)
-                float velChangeRatePos = 25f;
-                float velChangeRateNeg = 25f;
-                
-
-
-                float vel = velocityMgn[i];
-
-                if (velocityMgn[i] < velocity.magnitude)
-                    vel = Mathf.MoveTowards(velocityMgn[i], velocity.magnitude, velChangeRatePos * Time.deltaTime);
-                if (velocityMgn[i] > velocity.magnitude)
-                    vel = Mathf.MoveTowards(velocityMgn[i], velocity.magnitude, velChangeRateNeg * Time.deltaTime);
-
-                
-                lerpStepZ = Mathf.InverseLerp(0, maxVelocity, vel);
-
-                float noisePower = 0.15f; // 1 -> 10 % (0.01 -> 0.1)
-                float noise = Mathf.PingPong(Time.time / 2, noisePower) - noisePower / 2;
-                //noise *= velocity.magnitude / maxVelocity;
-                noise *= noisePattern.Evaluate(lerpStepZ);
-
-                lerpStepZ += noise;
-
-
-
-
-                //Debug.Log(Mathf.PerlinNoise(x_coord, y_coord));
-
-
-
-                /*if (Mathf.Abs(velocity.magnitude - velocityMgn[i]) < 0.01f)
-                    lerpStepZ += UnityEngine.Random.Range(-0.25f, 0.25f);*/
-
-
-
-                velocityMgn[i] = maxVelocity * lerpStepZ;
-
-                /*if (velocity.magnitude > 0)
-                {
-                    //lerpStepZ = velocity.magnitude / maxVelocity;
-                    //lerpStepZ = Mathf.InverseLerp(0, maxVelocity, velocityMgn[i] + velChangeRate * Time.deltaTime);
-                    
-                }
-                else
-                    lerpStepZ = 0;*/
-
-                //float velMgn = Mathf.Lerp(0, maxVelocity, velocityMgn[i]);
-                //float prevStep = Mathf.InverseLerp(0, velocity.magnitude, velMgn);
-                //lerpStepZ = prevStep + velChangeRate;
-
-                //velocityMgn[i] = maxVelocity * lerpStepZ;
-                //velocityMgn[i] = lerpStepZ;
-
-                //Debug.Log(lerpStepZ);
-
-
-
-
+                lerpStepZ += shake;
 
                 float offsetZ = Mathf.Lerp(0, -offsetLimit, lerpStepZ);
-                stackItemOffsets[i] = new Vector2(0, offsetZ);
-                //stackItems[i].localPosition = new Vector3(stackItems[i].localPosition.x, stackItems[i].localPosition.y, offsetZ);
-                //Debug.Log(offsetZ);
 
-                //stackItems[i].localPosition = stackItems[i].InverseTransformPoint(stackItemPositions[i]);
-                /*Vector3 targetPosition = new Vector3(0, height, offsetZ);
-                stackItems[i].localPosition = Vector3.MoveTowards(stackItems[i].InverseTransformPoint(stackItemPositions[i]), targetPosition, Time.deltaTime);
-                stackItemPositions[i] = stackItems[i].position;*/
-
-                //Vector3 localPosPrev = transform.InverseTransformPoint(stackItemPositions[i]);
-                //float dX = stackItems[i].localPosition.x - localPosPrev.x;
                 Vector3 targetPosition = new Vector3(0, height, offsetZ);
-                Vector3? funcValues = stackItemFuncs[i].Update(Time.deltaTime, targetPosition);
-                stackItems[i].localPosition = new Vector3(funcValues.Value.x, funcValues.Value.y, funcValues.Value.z);
+                item.UpdatePosition(Time.deltaTime, targetPosition);
 
-
-
-                //Vector3 targetPosition = new Vector3(0, height, offsetZ);
-                //stackItems[i].position = Vector3.MoveTowards(stackItemPositions[i], transform.TransformPoint(targetPosition), Time.deltaTime * 2f);
-                //stackItemPositions[i] = stackItems[i].position;
-
-                /*Vector3 targetPosition = new Vector3(0, height, offsetZ);
-                float maxDriftDist = 2.0f;
-                float currentDrift = Vector3.Distance(stackItemPositions[i], transform.TransformPoint(targetPosition)) + Time.deltaTime * 3.0f;
-                float driftValue = Mathf.InverseLerp(0, maxDriftDist, currentDrift);
-                stackItems[i].position = Vector3.Lerp(stackItemPositions[i], transform.TransformPoint(targetPosition), driftValue);*/
-
-
-
-                height += stackItemHeights[i] / 2 + itemsSpacing;
+                height += item.HalfHeight + itemsSpacing;
             }
         }
 
         private void ApplyRotation()
         {
-            if (stackItems.Length < 1)
+            if (_stackItems.Count == 0)
                 return;
 
-            Vector3 downDir, rightDir, forwardDir, lookAtPoint, lookAtOffset;
+            Vector3 lookAtPoint;
 
-            for (int i = 0; i < stackItems.Length; i++)
+            for (int i = 0; i < _stackItems.Count; i++)
             {
                 if (i == 0)
                     lookAtPoint = transform.TransformPoint(Vector3.zero);
                 else
-                {
-                    lookAtOffset = stackItems[i - 1].TransformDirection(0, stackItemHeights[i - 1] / 2, 0);
-                    lookAtPoint = stackItems[i - 1].position + lookAtOffset;
-                }
+                    lookAtPoint = _stackItems[i - 1].LookAtPoint;
 
-                //direction object's local down should face
-                downDir = (lookAtPoint - stackItems[i].position).normalized;
-
-                // direction object's local right should face
-                rightDir = transform.right;
-
-                // direction object's local forward should face
-                forwardDir = Vector3.Cross(downDir, rightDir);
-
-                stackItems[i].rotation = Quaternion.LookRotation(forwardDir, -downDir);
+                _stackItems[i].LookAt(lookAtPoint, transform.right);
             }
-        }
-
-        private float GetItemHeight(Transform item)
-        {
-            Renderer itemRenderer = item.GetComponent<Renderer>();
-
-            if (itemRenderer == null)
-                return 0;
-            else
-                return itemRenderer.localBounds.size.y * item.localScale.y;
         }
 
         private void OnDrawGizmos()
         {
-            if (!visualizeBendingLimits || stackItems.Length < 1 || stackItemHeights == null || stackItemHeights.Length < 1)
+            if (!visualizeBendingLimits || _stackItems == null || _stackItems.Count == 0)
                 return;
 
             DrawBendingLimits();
@@ -286,9 +172,9 @@ namespace Stacking
             Vector3 minPoint = transform.position;
             Vector3 maxPoint = transform.position;
 
-            for (int i = 0; i < stackItems.Length; i++)
+            foreach (var item in _stackItems)
             {
-                height += stackItemHeights[i] / 2;
+                height += item.HalfHeight;
 
                 minPoint.y = transform.position.y + height;
                 maxPoint.y = transform.position.y + height;
@@ -314,7 +200,7 @@ namespace Stacking
 
                 minPoint.z = maxPoint.z = transform.position.z;
 
-                height += stackItemHeights[i] / 2 + itemsSpacing;
+                height += item.HalfHeight + itemsSpacing;
             }
         }
     }
