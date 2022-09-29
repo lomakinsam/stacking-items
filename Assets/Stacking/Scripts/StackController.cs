@@ -30,6 +30,7 @@ namespace Stacking
 
         private float stackHeight;
         private float[] stackItemHeights;
+        private float[] velocityMgn;
         private Vector2[] stackItemOffsets;
         private Vector3[] stackItemPositions;
         private SecondOrderDynamics[] stackItemFuncs;
@@ -37,12 +38,13 @@ namespace Stacking
         private Vector3 prevPosition;
         private Vector2 velocity;
 
-        private SecondOrderDynamics func;
-
         private float maxOffset => stackHeight * bendingForce;
 
         [SerializeField]
         private TMP_Text debugText;
+
+        [SerializeField]
+        private AnimationCurve noisePattern;
 
         private void Awake() => Init();
 
@@ -64,6 +66,7 @@ namespace Stacking
         {
             stackHeight = 0.0f;
             stackItemHeights = new float[stackItems.Length];
+            velocityMgn = new float[stackItems.Length];
             stackItemOffsets = new Vector2[stackItems.Length];
             stackItemPositions = new Vector3[stackItems.Length];
             stackItemFuncs = new SecondOrderDynamics[stackItems.Length];
@@ -84,6 +87,7 @@ namespace Stacking
                                                      defaultPosition.z);
 
                 stackItemPositions[i] = stackItems[i].position;
+                velocityMgn[i] = 0;
 
                 stackItemFuncs[i] = new SecondOrderDynamics(1.5f, 0.1f, 0, stackItems[i].localPosition);
 
@@ -93,13 +97,18 @@ namespace Stacking
 
         private void UpdateVelocity()
         {
+            Vector3 vel = (transform.position - prevPosition) / Time.deltaTime;
+
+
             float dx = transform.position.x - prevPosition.x;
             float dz = transform.position.z - prevPosition.z;
             prevPosition = transform.position;
 
-            velocity = new Vector2(dx, dz) * Time.deltaTime * 100;
+            //velocity = new Vector2(dx, dz) * Time.deltaTime * 100;
+            velocity = new Vector2(vel.x, vel.z);
 
-            debugText.text = $"Velocity X: {velocity.x:0.00} \n Velocity Z: {velocity.y:0.00}";
+            //debugText.text = $"Velocity X: {velocity.x:0.00} \n Velocity Z: {velocity.y:0.00}";
+            debugText.text = $"Velocity X: {vel.x:0.00} \n Velocity Z: {vel.z:0.00}";
         }
 
         private void ApplyVelocity()
@@ -125,11 +134,64 @@ namespace Stacking
                 stackItems[i].localPosition = new Vector3(0, stackItems[i].localPosition.y, 0) + new Vector3(offsetX, 0, offsetZ);*/
 
                 float lerpStepZ = 0.0f;
+                float maxVelocity = 2.0f; // 5 units per second (5 m/s)
+                float velChangeRatePos = 25f;
+                float velChangeRateNeg = 25f;
+                
 
-                if (velocity.magnitude > 0.001f)
-                    lerpStepZ = Mathf.InverseLerp(0, -offsetLimit, stackItemOffsets[i].y - velocity.magnitude);
+
+                float vel = velocityMgn[i];
+
+                if (velocityMgn[i] < velocity.magnitude)
+                    vel = Mathf.MoveTowards(velocityMgn[i], velocity.magnitude, velChangeRatePos * Time.deltaTime);
+                if (velocityMgn[i] > velocity.magnitude)
+                    vel = Mathf.MoveTowards(velocityMgn[i], velocity.magnitude, velChangeRateNeg * Time.deltaTime);
+
+                
+                lerpStepZ = Mathf.InverseLerp(0, maxVelocity, vel);
+
+                float noisePower = 0.15f; // 1 -> 10 % (0.01 -> 0.1)
+                float noise = Mathf.PingPong(Time.time / 2, noisePower) - noisePower / 2;
+                //noise *= velocity.magnitude / maxVelocity;
+                noise *= noisePattern.Evaluate(lerpStepZ);
+
+                lerpStepZ += noise;
+
+
+
+
+                //Debug.Log(Mathf.PerlinNoise(x_coord, y_coord));
+
+
+
+                /*if (Mathf.Abs(velocity.magnitude - velocityMgn[i]) < 0.01f)
+                    lerpStepZ += UnityEngine.Random.Range(-0.25f, 0.25f);*/
+
+
+
+                velocityMgn[i] = maxVelocity * lerpStepZ;
+
+                /*if (velocity.magnitude > 0)
+                {
+                    //lerpStepZ = velocity.magnitude / maxVelocity;
+                    //lerpStepZ = Mathf.InverseLerp(0, maxVelocity, velocityMgn[i] + velChangeRate * Time.deltaTime);
+                    
+                }
                 else
-                    lerpStepZ = Mathf.InverseLerp(0, -offsetLimit, stackItemOffsets[i].y + resetSpeed * Time.deltaTime);
+                    lerpStepZ = 0;*/
+
+                //float velMgn = Mathf.Lerp(0, maxVelocity, velocityMgn[i]);
+                //float prevStep = Mathf.InverseLerp(0, velocity.magnitude, velMgn);
+                //lerpStepZ = prevStep + velChangeRate;
+
+                //velocityMgn[i] = maxVelocity * lerpStepZ;
+                //velocityMgn[i] = lerpStepZ;
+
+                //Debug.Log(lerpStepZ);
+
+
+
+
 
                 float offsetZ = Mathf.Lerp(0, -offsetLimit, lerpStepZ);
                 stackItemOffsets[i] = new Vector2(0, offsetZ);
@@ -210,7 +272,7 @@ namespace Stacking
             if (!visualizeBendingLimits || stackItems.Length < 1 || stackItemHeights == null || stackItemHeights.Length < 1)
                 return;
 
-            //DrawBendingLimits();
+            DrawBendingLimits();
         }
 
         private void DrawBendingLimits()
