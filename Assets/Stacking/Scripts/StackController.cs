@@ -41,14 +41,19 @@ namespace Stacking
         [SerializeField]
         private float shakeFrequency = 2.0f;
 
+        [SerializeField]
+        private float maxAngularVelocity = 360;
+
         private float stackHeight;
 
         private List<StackItem> _stackItems;
 
         private Vector3 velocity;
+        private float velocityMgn;
 
         private Vector3 prevPosition;
-        private float velocityMgn;
+        private Vector3 forwardDir;
+        private float prevAngle;
 
         private float maxOffset => stackHeight * bendingForce;
 
@@ -69,6 +74,8 @@ namespace Stacking
             velocity = Vector3.zero;
             velocityMgn = 0.0f;
             prevPosition = transform.position;
+            forwardDir = transform.forward;
+            prevAngle = 0.0f;
             
             InitStackItems();
         }
@@ -105,6 +112,13 @@ namespace Stacking
         {
             float height = 0.0f;
 
+            float maxAngularVelocity = 360.0f;
+            float angularVelocity = Vector3.Angle(transform.forward, forwardDir) / Time.deltaTime;
+            angularVelocity = transform.InverseTransformDirection(forwardDir).x > 0 ? angularVelocity : -angularVelocity;
+            forwardDir = transform.forward;
+            float lerpStepX = lerpStepX = Mathf.InverseLerp(-maxAngularVelocity, maxAngularVelocity, angularVelocity);
+            
+
             foreach (var item in _stackItems)
             {
                 height += item.HalfHeight;
@@ -123,12 +137,19 @@ namespace Stacking
 
                 float shake = Mathf.PingPong(Time.time * shakeFrequency, shakePower) - shakePower / 2;
                 shake *= shakeDistribution.Evaluate(lerpStepZ);
-
                 lerpStepZ += shake;
 
                 float offsetZ = Mathf.Lerp(0, -offsetLimit, lerpStepZ);
+                float offsetX = Mathf.Lerp(-offsetLimit, offsetLimit, lerpStepX);
 
-                Vector3 targetPosition = new Vector3(0, height, offsetZ);
+                //float dX = transform.InverseTransformPoint(item.Position).x - transform.InverseTransformPoint(item.PrevPosition).x;
+                //dX /= Time.deltaTime;
+                //dX = Mathf.Clamp(dX, -offsetLimit, offsetLimit);
+
+
+
+
+                Vector3 targetPosition = new Vector3(offsetX, height, offsetZ);
                 item.UpdatePosition(Time.deltaTime, targetPosition);
 
                 height += item.HalfHeight + itemsSpacing;

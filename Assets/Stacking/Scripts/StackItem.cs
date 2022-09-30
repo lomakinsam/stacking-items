@@ -8,6 +8,9 @@ namespace Stacking
         private readonly Transform transform;
         private readonly SecondOrderDynamics func;
 
+        public Vector3 PrevPosition { get; private set; }
+        public Vector3 Position => transform.position;
+
         public float Height { get; private set; }
         public float HalfHeight { get; private set; }
 
@@ -22,6 +25,7 @@ namespace Stacking
             HalfHeight = Height / 2;
 
             transform.position = new Vector3(stackBottom.x, stackBottom.y + HalfHeight, stackBottom.z);
+            PrevPosition = transform.position;
 
             func = new SecondOrderDynamics(SOD_params.x, SOD_params.y, SOD_params.z, transform.localPosition);
         }
@@ -30,6 +34,7 @@ namespace Stacking
         {
             Vector3? funcValues = func.Update(T, x, xd);
             transform.localPosition = new Vector3(funcValues.Value.x, funcValues.Value.y, funcValues.Value.z);
+            PrevPosition = transform.position;
         }
 
         public void LookAt(Vector3 target, Vector3 worldRight)
