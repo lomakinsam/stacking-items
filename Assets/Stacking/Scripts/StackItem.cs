@@ -14,6 +14,9 @@ namespace Stacking
         public float Height { get; private set; }
         public float HalfHeight { get; private set; }
 
+        public float Width { get; private set; }
+        public float HalfWidth { get; private set; }
+
         public Vector3 LookAtPoint => transform.position + transform.TransformDirection(0.0f, HalfHeight, 0.0f);
 
         public StackItem(Transform transform, Vector3 stackBottom, Vector3 SOD_params)
@@ -23,6 +26,9 @@ namespace Stacking
             Renderer renderer = transform.GetComponent<Renderer>();
             Height = renderer == null ? 0 : renderer.localBounds.size.y * transform.localScale.y;
             HalfHeight = Height / 2;
+
+            Width = renderer == null ? 0 : renderer.localBounds.size.x * transform.localScale.x;
+            HalfWidth = Width / 2;
 
             transform.position = new Vector3(stackBottom.x, stackBottom.y + HalfHeight, stackBottom.z);
             PrevPosition = transform.position;

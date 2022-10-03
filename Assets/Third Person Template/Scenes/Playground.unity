@@ -1441,6 +1441,7 @@ MonoBehaviour:
   stabilizationSpeed: 25
   shakePower: 0.15
   shakeFrequency: 1
+  maxAngularVelocity: 1
   debugText: {fileID: 610649663}
 --- !u!4 &1700447211 stripped
 Transform:
