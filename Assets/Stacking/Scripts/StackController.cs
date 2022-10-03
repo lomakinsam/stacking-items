@@ -25,9 +25,6 @@ namespace Stacking
         private Vector3 velocity;
 
         [SerializeField]
-        private bool visualizeBendingLimits;
-
-        [SerializeField]
         private bool modifyBendingSpeed;
 
         [SerializeField]
@@ -187,57 +184,6 @@ namespace Stacking
                     lookAtPoint = _stackItems[i - 1].LookAtPoint;
 
                 _stackItems[i].LookAt(lookAtPoint, transform.right);
-            }
-        }
-
-        private void OnDrawGizmos()
-        {
-            if (!visualizeBendingLimits || _stackItems == null || _stackItems.Count == 0)
-                return;
-
-            DrawBendingLimits();
-        }
-
-        private void DrawBendingLimits()
-        {
-            float offset = 0.0f;
-            float offsetNormalized = 0.0f;
-            
-            float height = 0.0f;
-            float heightNormalized = 0.0f;
-
-            Vector3 minPoint = transform.position;
-            Vector3 maxPoint = transform.position;
-
-            foreach (var item in _stackItems)
-            {
-                height += item.HalfHeight;
-
-                minPoint.y = transform.position.y + height;
-                maxPoint.y = transform.position.y + height;
-
-                heightNormalized = height / stackHeight;
-                offsetNormalized = bendPattern.Evaluate(heightNormalized);
-
-                offset = offsetNormalized * maxOffset;
-
-                minPoint.x -= offset;
-                maxPoint.x += offset;
-
-                Gizmos.color = Color.red;
-                Gizmos.DrawLine(minPoint, maxPoint);
-
-                minPoint.x = maxPoint.x = transform.position.x;
-
-                minPoint.z -= offset;
-                maxPoint.z += offset;
-
-                Gizmos.color = Color.blue;
-                Gizmos.DrawLine(minPoint, maxPoint);
-
-                minPoint.z = maxPoint.z = transform.position.z;
-
-                height += item.HalfHeight + itemsSpacing;
             }
         }
     }
