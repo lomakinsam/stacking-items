@@ -1,6 +1,8 @@
 using System;
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
+using Stacking.Attributes;
+
 
 namespace Stacking
 {
@@ -8,10 +10,11 @@ namespace Stacking
     {
         public Transform[] stackItems;
 
+        [Space]
         [SerializeField]
         [Range(0.0f, 1.0f)]
         private float bendingForce;
-
+        
         [SerializeField]
         [Range(0.0f, 1.0f)]
         private float itemsSpacing;
@@ -22,36 +25,48 @@ namespace Stacking
         [SerializeField]
         private float maxVelocity = 2.0f;
 
+        [SerializeField]
+        [DisabledField]
         private Vector3 velocity;
 
+        [Space]
         [SerializeField]
         private bool modifyBendingSpeed;
 
         [SerializeField]
+        [ConditionalHide("modifyBendingSpeed", true)]
         [Range(1.0f, 25.0f)]
         private float bendingSpeed;
 
         [SerializeField]
+        [ConditionalHide("modifyBendingSpeed", true)]
         [Range(1.0f, 25.0f)]
         private float stabilizationSpeed;
 
+        [Space]
         [SerializeField]
         private bool shakeEnabled;
 
-        [Range(0.1f, 1.0f)]
         [SerializeField]
+        [ConditionalHide("shakeEnabled", true)]
+        [Range(0.1f, 1.0f)]
         private float shakePower = 0.15f;
 
         [SerializeField]
+        [ConditionalHide("shakeEnabled", true)]
         private AnimationCurve shakeDistribution;
 
+        [Space]
         [SerializeField]
         private bool sidesBendingEnabled;
 
         [SerializeField]
+        [ConditionalHide("sidesBendingEnabled", true)]
+        [DisabledField]
         private float angularVelocity;
 
         [SerializeField]
+        [ConditionalHide("sidesBendingEnabled", true)]
         private float maxAngularVelocity = 360;
 
         private List<StackItem> _stackItems;
