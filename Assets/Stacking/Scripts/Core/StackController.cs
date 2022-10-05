@@ -14,7 +14,11 @@ namespace Stacking
         [SerializeField]
         [Range(0.0f, 1.0f)]
         private float bendingForce;
-        
+
+        [SerializeField]
+        [Range(1.0f, 15.0f)]
+        private float stackHeight = 1.0f;
+
         [SerializeField]
         [Range(0.0f, 1.0f)]
         private float itemsSpacing;
@@ -81,8 +85,6 @@ namespace Stacking
 
         private List<StackItem> _stackItems;
 
-        private float stackHeight;
-
         private Vector3 velocity;
         private Vector3 prevPosition;
         private Vector3 forwardDir;
@@ -111,7 +113,7 @@ namespace Stacking
 
         private void InitStackItems()
         {
-            stackHeight = 0.0f;
+            float height = 0.0f;
 
             _stackItems = new List<StackItem>();
 
@@ -119,13 +121,13 @@ namespace Stacking
 
             for (int i = 0; i < stackItems.Length; i++)
             {
-                Vector3 stackBottom = new (defaultPosition.x, defaultPosition.y + stackHeight, defaultPosition.z);
+                Vector3 stackBottom = new (defaultPosition.x, defaultPosition.y + height, defaultPosition.z);
                 Vector3 SOD_params = new (f, z, r);
 
                 var item = new StackItem(stackItems[i], stackBottom, SOD_params);
                 _stackItems.Add(item);
 
-                stackHeight += item.Height + itemsSpacing;
+                height += item.Height + itemsSpacing;
             }
         }
 
@@ -169,7 +171,7 @@ namespace Stacking
             {
                 height += _stackItems[i].HalfHeight;
                 
-                float heightNormilized = height / stackHeight;
+                float heightNormilized = Mathf.Clamp01(height / stackHeight);
                 float offsetLimit = bendPattern.Evaluate(heightNormilized) * maxOffset;
 
                 float offsetZ = Mathf.Lerp(0, -offsetLimit, lerpStepZ);
