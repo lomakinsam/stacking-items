@@ -6,7 +6,8 @@ namespace Stacking
     public class StackItem
     {
         private readonly Transform transform;
-        private readonly SecondOrderDynamics func;
+
+        private SecondOrderDynamics func;
 
         public float Height { get; private set; }
         public float HalfHeight { get; private set; }
@@ -16,9 +17,12 @@ namespace Stacking
 
         public Vector3 LookAtPoint => transform.position + transform.TransformDirection(0.0f, HalfHeight, 0.0f);
 
-        public StackItem(Transform transform, Vector3 stackBottom, Vector3 SOD_params)
+        public StackItem(Transform transform, Vector3 stackBottom, Vector3 SOD_params, Transform parent)
         {
             this.transform = transform;
+
+            if (transform.parent != parent)
+                transform.SetParent(parent, true);
 
             Renderer renderer = transform.GetComponent<Renderer>();
             Height = renderer == null ? 0 : renderer.localBounds.size.y * transform.localScale.y;
@@ -47,5 +51,17 @@ namespace Stacking
 
             transform.rotation = Quaternion.LookRotation(forwardDir, -downDir);
         }
+
+        public bool IsRelatedGameObject(GameObject gameObject)
+        {
+            return ReferenceEquals(transform.gameObject, gameObject);
+        }
+
+        public void UpdateSODParams(float f, float z, float r)
+        {
+            func = new SecondOrderDynamics(f, z, r, transform.localPosition);
+        }
+
+        public void DetachParent() => transform.parent = null;
     }
 }

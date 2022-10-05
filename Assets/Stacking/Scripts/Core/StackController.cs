@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using Stacking.Attributes;
 
-
 namespace Stacking
 {
     public class StackController : MonoBehaviour
     {
-        public Transform[] stackItems;
+        public List<Transform> stackItems;
 
         [Space]
         [SerializeField]
@@ -83,6 +82,8 @@ namespace Stacking
         [Range(-10, 10)]
         public float r = 0.0f;
 
+        private float f0, z0, r0;
+
         private List<StackItem> _stackItems;
 
         private Vector3 velocity;
@@ -95,6 +96,8 @@ namespace Stacking
 
         private void Update()
         {
+            SyncStackItems();
+
             UpdateVelocity();
             ApplyVelocity();
             ApplyRotation();
@@ -117,18 +120,66 @@ namespace Stacking
 
             _stackItems = new List<StackItem>();
 
+            f0 = f;
+            z0 = z;
+            r0 = r;
+
             Vector3 defaultPosition = transform.position;
 
-            for (int i = 0; i < stackItems.Length; i++)
+            for (int i = 0; i < stackItems.Count; i++)
             {
                 Vector3 stackBottom = new (defaultPosition.x, defaultPosition.y + height, defaultPosition.z);
                 Vector3 SOD_params = new (f, z, r);
 
-                var item = new StackItem(stackItems[i], stackBottom, SOD_params);
+                var item = new StackItem(stackItems[i], stackBottom, SOD_params, transform);
                 _stackItems.Add(item);
 
                 height += item.Height + itemsSpacing;
             }
+        }
+
+        private void SyncStackItems()
+        {
+            float height = 0.0f;
+
+            Vector3 defaultPosition = transform.position;
+
+            for (int i = 0; i < stackItems.Count; i++)
+            {
+                if (i + 1 > _stackItems.Count)
+                {
+                    Vector3 stackBottom = new(defaultPosition.x, defaultPosition.y + height, defaultPosition.z);
+                    Vector3 SOD_params = new(f, z, r);
+
+                    var item = new StackItem(stackItems[i], stackBottom, SOD_params, transform);
+                    _stackItems.Add(item);
+                }
+                else if (!_stackItems[i].IsRelatedGameObject(stackItems[i].gameObject))
+                {
+                    Vector3 stackBottom = new(defaultPosition.x, defaultPosition.y + height, defaultPosition.z);
+                    Vector3 SOD_params = new(f, z, r);
+
+                    _stackItems[i].DetachParent();
+                    _stackItems[i] = new StackItem(stackItems[i], stackBottom, SOD_params, transform);
+                }
+                else if (f0 != f || z0 != z || r0 != r)
+                    _stackItems[i].UpdateSODParams(f, z, r);
+
+                height += _stackItems[i].Height + itemsSpacing;
+            }
+
+            if (_stackItems.Count > stackItems.Count)
+            {
+                for (int i = stackItems.Count; i < _stackItems.Count; i++)
+                    _stackItems[i].DetachParent();
+
+                int range = _stackItems.Count - stackItems.Count;
+                _stackItems.RemoveRange(stackItems.Count, range);
+            }
+
+            f0 = f;
+            z0 = z;
+            r0 = r;
         }
 
         private void UpdateVelocity()
