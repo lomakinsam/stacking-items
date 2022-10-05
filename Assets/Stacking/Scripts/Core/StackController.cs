@@ -27,7 +27,7 @@ namespace Stacking
 
         [SerializeField]
         [DisabledField]
-        private Vector3 velocity;
+        private float velocityMagnitude;
 
         [Space]
         [SerializeField]
@@ -69,11 +69,21 @@ namespace Stacking
         [ConditionalHide("sidesBendingEnabled", true)]
         private float maxAngularVelocity = 360;
 
+        [Header("Velocity change response")]
+        [Range(0, 10)]
+        public float f = 1.0f;
+
+        [Range(0, 2)]
+        public float z = 1.0f;
+
+        [Range(-10, 10)]
+        public float r = 0.0f;
+
         private List<StackItem> _stackItems;
 
         private float stackHeight;
-        private float velocityMgn;
 
+        private Vector3 velocity;
         private Vector3 prevPosition;
         private Vector3 forwardDir;
 
@@ -90,7 +100,7 @@ namespace Stacking
 
         private void Init()
         {
-            velocityMgn = 0.0f;
+            velocityMagnitude = 0.0f;
             angularVelocity = 0.0f;
             velocity = Vector3.zero;
             prevPosition = transform.position;
@@ -110,7 +120,7 @@ namespace Stacking
             for (int i = 0; i < stackItems.Length; i++)
             {
                 Vector3 stackBottom = new (defaultPosition.x, defaultPosition.y + stackHeight, defaultPosition.z);
-                Vector3 SOD_params = new (1.5f, 0.1f, 0.0f);
+                Vector3 SOD_params = new (f, z, r);
 
                 var item = new StackItem(stackItems[i], stackBottom, SOD_params);
                 _stackItems.Add(item);
@@ -132,9 +142,9 @@ namespace Stacking
             float lerpStepZ;
 
             if (modifyBendingSpeed)
-                velocityMgn = GetCustomVelocityMagnitude();
+                velocityMagnitude = GetCustomVelocityMagnitude();
             else
-                velocityMgn = velocity.magnitude;
+                velocityMagnitude = velocity.magnitude;
 
             if (sidesBendingEnabled)
             {
@@ -146,7 +156,7 @@ namespace Stacking
             else
                 lerpStepX = 0.5f;
 
-            lerpStepZ = Mathf.InverseLerp(0, maxVelocity, velocityMgn);
+            lerpStepZ = Mathf.InverseLerp(0, maxVelocity, velocityMagnitude);
 
             if (shakeEnabled)
             {
@@ -176,10 +186,10 @@ namespace Stacking
         {
             float targetVelocityMgn = velocity.magnitude;
 
-            if (velocityMgn < targetVelocityMgn)
-                return Mathf.MoveTowards(velocityMgn, targetVelocityMgn, bendingSpeed * Time.deltaTime);
-            else if (velocityMgn > targetVelocityMgn)
-                return Mathf.MoveTowards(velocityMgn, targetVelocityMgn, stabilizationSpeed * Time.deltaTime);
+            if (velocityMagnitude < targetVelocityMgn)
+                return Mathf.MoveTowards(velocityMagnitude, targetVelocityMgn, bendingSpeed * Time.deltaTime);
+            else if (velocityMagnitude > targetVelocityMgn)
+                return Mathf.MoveTowards(velocityMagnitude, targetVelocityMgn, stabilizationSpeed * Time.deltaTime);
             else
                 return targetVelocityMgn;
         }

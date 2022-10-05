@@ -1149,7 +1149,7 @@ MonoBehaviour:
   - {fileID: 1065598244}
   - {fileID: 1852108454}
   - {fileID: 1700447211}
-  bendingForce: 0.3
+  bendingForce: 0.313
   itemsSpacing: 0.05
   bendPattern:
     serializedVersion: 2
@@ -1175,9 +1175,10 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  maxVelocity: 2
+  maxVelocity: 4.35
+  velocity: {x: 0, y: 0, z: 0}
   modifyBendingSpeed: 0
-  bendingSpeed: 25
+  bendingSpeed: 9.52
   stabilizationSpeed: 25
   shakeEnabled: 0
   shakePower: 0.15

@@ -7,6 +7,8 @@ namespace Stacking.EditorExtensions
     [CustomPropertyDrawer(typeof(ConditionalHideAttribute))]
     public class ConditionalHidePropertyDrawer : PropertyDrawer
     {
+        private const float horizontalOffset = 10.0f;
+
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             ConditionalHideAttribute condHAtt = (ConditionalHideAttribute)attribute;
@@ -16,6 +18,9 @@ namespace Stacking.EditorExtensions
             GUI.enabled = enabled;
             if (!condHAtt.HideInInspector || enabled)
             {
+                position.x += horizontalOffset;
+                position.width -= horizontalOffset;
+
                 EditorGUI.PropertyField(position, property, label, true);
             }
 
