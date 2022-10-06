@@ -1149,7 +1149,8 @@ MonoBehaviour:
   - {fileID: 1065598244}
   - {fileID: 1852108454}
   - {fileID: 1700447211}
-  bendingForce: 0.313
+  bendingForce: 0.3
+  stackHeight: 2
   itemsSpacing: 0.05
   bendPattern:
     serializedVersion: 2
@@ -1175,13 +1176,13 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  maxVelocity: 4.35
-  velocity: {x: 0, y: 0, z: 0}
+  maxVelocity: 5
+  velocityMagnitude: 0
   modifyBendingSpeed: 0
   bendingSpeed: 9.52
   stabilizationSpeed: 25
-  shakeEnabled: 0
-  shakePower: 0.15
+  shakeEnabled: 1
+  shakePower: 0.45
   shakeDistribution:
     serializedVersion: 2
     m_Curve:
@@ -1206,9 +1207,12 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  sidesBendingEnabled: 0
-  angularVelocity: 0
-  maxAngularVelocity: 360
+  sidesBendingEnabled: 1
+  angularVelocity: -0
+  maxAngularVelocity: 1200
+  f: 2
+  z: 0.1
+  r: 0
 --- !u!4 &1700447211 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8293931522279398795, guid: 67d8406e33528fb4ebddb3ebab29f24f,
